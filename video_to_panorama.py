@@ -162,16 +162,6 @@ def stitch_and_save_panorama(frames: list[np.ndarray], image_output_path: str):
     # Save as PNG to preserve transparency
     cv2.imwrite(Path(image_output_path) / "panorama_transparent.png", stitched_bgra)
 
-
-# PXL_20250614_193237148 = {
-#     "video_file_path": r"C:\Users\ryzhara\Desktop\Democratic Party Things\Gallatin No Kings Rally Images\videos\PXL_20250614_193237148.mp4",
-#     "start_time": 9.0,
-#     "end_time": 22.0,
-#     "extract_fps": 3,
-#     "cv2_rotation_enum": cv2.ROTATE_90_CLOCKWISE,
-# }
-
-
 if __name__ == "__main__":
     # python extract_frames.py myvideo.mp4 --start_time 10 --end_time 60 --fps 5 --rotate_frames cw90
     args = parse_args()
