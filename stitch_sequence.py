@@ -3,19 +3,31 @@ import argparse
 from pathlib import Path
 import sys
 
-# This script was generated with request to gemini.google.com with some example code using
-# opencv-python. Gemini politely commented on the poor coding style, cleaned it up and made it better.
+# You will need to
+#   pip install opencv-python
+#   pip install numpy
+#   see requirements.txt for this:
+#       opencv-python>=4.11.0.86
+#       numpy~=2.3.0
+
+# This script was generated with request to gemini.google.com with
+# some example code using opencv-python. Gemini politely commented
+# on the poor coding style, cleaned it up and made it better.
 # The prompt was this:
 #
-#       I have the python code below for reading a list of images names from a directory and then compositing
-#       them into a panoramic image. Please evaluate that for correctness and turn it into a standalone command
-#       line script. it should take as input:
+#       I have the python code below for reading a list of images names
+#       from a directory and then compositing them into a panoramic image.
+#       Please evaluate that for correctness and turn it into a standalone
+#       command line script. it should take as input:
 #           the base directory path
 #           a filter for file names, e.g., a regex, or file extension
 #
-#       We assume that the file name sort order is the image sequence order, so sort the files by name.
+#       We assume that the file name sort order is the image sequence
+#       order, so sort the files by name.
 
-# This has been tested with photos from a Pixel 8 Pro (50Mp camera) and iPhone SE (8Mp camera)
+# This has been tested with photos from a
+#       Pixel 8 Pro (50Mp camera)
+#       iPhone SE (8Mp camera)
 
 def list_files_for_stitching(directory: str, file_filter: str) -> list[str]:
     """
