@@ -89,7 +89,7 @@ def count_color_blobs(
     - target_rgb: Target color to match (as RGB tuple)
     - tolerance: +/- range for each RGB channel (default: 30)
     - grayscale_copy: If True, draw contours on a grayscale copy of the image
-    - contour_rgb: RGB color for drawing contours (default: bright green)
+    - annotation_contour_rgb: RGB color for drawing contours (default: bright green)
 
     Returns:
     - count: number of detected blobs

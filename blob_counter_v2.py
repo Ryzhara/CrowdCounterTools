@@ -13,8 +13,6 @@ ShowWorkOption = Union[Literal['true', 'false', 'grayscale'], str]
 
 # Use typing.Final for constant values
 NAMED_COLORS: Final[dict[str, RgbColor]] = {
-    "black": (0, 0, 0),
-    "white": (255, 255, 255),
     "red": (255, 0, 0),
     "green": (0, 255, 0),
     "blue": (0, 0, 255),
@@ -23,6 +21,9 @@ NAMED_COLORS: Final[dict[str, RgbColor]] = {
     "cyan": (0, 255, 255),
 }
 
+MARKER_COLOR: Final[RgbColor] = (192, 64, 192)
+BLACK_COLOR: Final[RgbColor] = (0, 0, 0)
+WHITE_COLOR: Final[RgbColor] = (255, 255, 255)
 
 # --- Argument Parsing Helpers ---
 
@@ -53,38 +54,21 @@ def parse_rgb(value: str) -> RgbColor:
         )
 
 
-def parse_show_work(value: str) -> ShowWorkOption:
-    """
-    Validates the show_work argument.
-
-    :param value: The string to validate.
-    :raises argparse.ArgumentTypeError: If the value is not one of the allowed options.
-    :return: The validated string.
-    """
-    valid_options = ("true", "false", "grayscale")
+def parse_show_work(value):
     value = value.strip().lower()
-    if value in valid_options:
+    if value in ("true", "false", "grayscale"):
         return value
-    raise argparse.ArgumentTypeError(
-        f"show_work must be one of: {', '.join(valid_options)}"
-    )
+    raise argparse.ArgumentTypeError("show_work must be one of: true, false, grayscale")
 
 
 def get_args() -> argparse.Namespace:
     """Sets up and parses command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Count and visualize RGB blobs (connected components) in an image."
+        description="Count and visualize color blobs (connected components) in an image."
     )
 
     # Use Path type for clarity, though it will be read as str and converted back later
     parser.add_argument("image_path", type=Path, help="Path to the input image file.")
-
-    parser.add_argument(
-        "--target-rgb",  # Use hyphens for command-line arguments
-        type=parse_rgb,
-        required=True,
-        help="Target color as 'red', 'green', etc. or RGB tuple like 255,0,0.",
-    )
 
     parser.add_argument(
         "--tolerance",
@@ -95,17 +79,17 @@ def get_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
-        "--show-work",
+        "--show_work",
         type=parse_show_work,
-        default="false",
-        help="Whether and how to draw contours: 'true', 'false' (default), or 'grayscale'.",
+        default="true",
+        help="Whether to draw contours: 'true', 'false' (default), or 'grayscale' (show work on grayscale copy)",
     )
 
     parser.add_argument(
-        "--marker-color",
+        "--marker_color",
         type=parse_rgb,
-        default="green",
-        help="Color for contour marker as name or RGB tuple (default: green).",
+        default=MARKER_COLOR,
+        help="Color for contour marker as name or RGB tuple (default: HOT PINK)",
     )
 
     args = parser.parse_args()
@@ -122,42 +106,15 @@ def get_args() -> argparse.Namespace:
 
 # --- Core Logic ---
 
-def count_color_blobs(
-        image_path: Path,
-        target_rgb: RgbColor,
-        *,
-        tolerance: int = 30,
-        grayscale_copy: bool = False,
-        contour_rgb: RgbColor = (0, 255, 0),
-) -> Tuple[int, Any, np.ndarray, np.ndarray]:
-    """
-    Counts color blobs (connected components) in an image based on a target color,
-    and returns the count, mask, and image with contours.
-
-    :param image_path: Path to the input image.
-    :param target_rgb: Target color to match (as RGB tuple).
-    :param tolerance: +/- range for each RGB channel (default: 30).
-    :param grayscale_copy: If True, draw contours on a grayscale copy of the image.
-    :param contour_rgb: RGB color for drawing contours (default: bright green).
-
-    :return: A tuple containing:
-        - count (int): number of detected blobs.
-        - contours (Any): list of contour specifications (OpenCV format).
-        - mask (np.ndarray): binary mask where blobs were detected.
-        - image_with_contours (np.ndarray): image with drawn contours.
-    :raises FileNotFoundError: If the image cannot be read.
-    """
-    # Use Path.as_posix() or str() for cv2.imread
-    image = cv2.imread(str(image_path))
-    if image is None:
-        raise FileNotFoundError(f"Could not read image at: {image_path}")
-
+#=================================
+# returns list of contours found for that color within the given tolerance
+def find_contours(image: np.ndarray, blob_rgb: RgbColor, tolerance: int) -> np.ndarray:
     # OpenCV uses BGR internally, so all colors must be reversed (R,G,B -> B,G,R)
-    target_bgr = target_rgb[::-1]
+    opencv_bgr = blob_rgb[::-1]
 
     # Calculate color ranges for cv2.inRange
-    lower_bgr = np.array([max(c - tolerance, 0) for c in target_bgr], dtype=np.uint8)
-    upper_bgr = np.array([min(c + tolerance, 255) for c in target_bgr], dtype=np.uint8)
+    lower_bgr = np.array([max(c - tolerance, 0) for c in opencv_bgr], dtype=np.uint8)
+    upper_bgr = np.array([min(c + tolerance, 255) for c in opencv_bgr], dtype=np.uint8)
 
     # Create the binary mask
     mask = cv2.inRange(image, lower_bgr, upper_bgr)
@@ -174,26 +131,63 @@ def count_color_blobs(
         cv2.CHAIN_APPROX_SIMPLE
     )
 
+    return contours
+
+
+def count_color_blobs(
+        image_path: Path,
+        *,
+        blob_color_list: dict[str, RgbColor],
+        tolerance: int = 30,
+        grayscale_copy: bool = False,
+        annotation_contour_rgb: RgbColor = (192, 64, 192),
+) -> Tuple[int, Any, np.ndarray, np.ndarray]:
+    """
+    Counts color blobs (connected components) in an image based on a target color,
+    and returns the count, mask, and image with contours.
+
+    :param image_path: Path to the input image.
+    :param blob_color_list: list of RGB match (as RGB tuple).
+    :param tolerance: +/- range for each RGB channel (default: 30).
+    :param grayscale_copy: If True, draw contours on a grayscale copy of the image.
+    :param annotation_contour_rgb: RGB color for drawing contours (default: bright green).
+
+    :return: A tuple containing:
+        - contour_list (Any): list of lists contour specifications (OpenCV format).
+        - image_with_contours (np.ndarray): image with drawn contours.
+    :raises FileNotFoundError: If the image cannot be read.
+    """
+    # Use Path.as_posix() or str() for cv2.imread
+    image = cv2.imread(str(image_path))
+    if image is None:
+        raise FileNotFoundError(f"Could not read image at: {image_path}")
+
+    contour_results = {}
+    for color_name, color_rgb in blob_color_list.items():
+        blob_contours = find_contours(image, color_rgb, tolerance)
+        contour_results[color_name] = blob_contours
+
     # Prepare image copy for drawing
     if grayscale_copy:
         # Convert to grayscale, then back to BGR so we can draw colored contours
-        image_with_contours = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        image_with_contours = cv2.cvtColor(image_with_contours, cv2.COLOR_GRAY2BGR)
+        annotated_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        annotated_image = cv2.cvtColor(annotated_image, cv2.COLOR_GRAY2BGR)
     else:
         # Draw on a color copy of the original image
-        image_with_contours = image.copy()
+        annotated_image = image.copy()
 
     # Draw contours
-    contour_bgr = contour_rgb[::-1]
-    cv2.drawContours(
-        image_with_contours,
-        contours,
-        contourIdx=-1,  # Draw all contours
-        color=contour_bgr,
-        thickness=2
-    )
+    contour_bgr = annotation_contour_rgb[::-1]
+    for blob_contours in contour_results.values():
+        cv2.drawContours(
+            annotated_image,
+            blob_contours,
+            contourIdx=-1,  # Draw all contours
+            color=contour_bgr,
+            thickness=2
+        )
 
-    return len(contours), contours, mask, image_with_contours
+    return contour_results, annotated_image
 
 
 def main() -> None:
@@ -205,22 +199,26 @@ def main() -> None:
 
         print("--- Blob Counter Arguments ---")
         print(f"  Image Path:   {args.image_path.resolve()}")
-        print(f"  Target RGB:   {args.target_rgb}")
-        print(f"  Tolerance:    {args.tolerance}")
         print(f"  Show Work:    {args.show_work}")
         print(f"  Marker Color: {args.marker_color}")
+        print(f"  Tolerance:    {args.tolerance}")
         print("------------------------------")
 
         # --- Run Core Logic ---
-        num_blobs, _, _, image_with_contours = count_color_blobs(
+        contour_list, image_with_contours = count_color_blobs(
             image_path=args.image_path,
-            target_rgb=args.target_rgb,
+            blob_color_list=NAMED_COLORS,
             tolerance=args.tolerance,
-            grayscale_copy=args.show_work == "grayscale",
-            contour_rgb=args.marker_color,
+        	grayscale_copy=args.show_work == "grayscale",
+            annotation_contour_rgb=MARKER_COLOR,
         )
 
-        print(f"✅ Found {num_blobs} blobs matching {args.target_rgb} in the image.")
+        counts = { k: len(v) for k,v in contour_list.items() }
+        counts["Total"] =sum(counts.values())
+
+        text_summary = [ f"\t{k}: {v}" for k,v in counts.items() ]
+
+        print(f"✅ Found\n{"\n".join(text_summary)}\nblobs in the image.")
 
         # --- Output / Visualization ---
         if args.show_work in ("true", "grayscale"):
@@ -228,8 +226,7 @@ def main() -> None:
             image_dir = args.image_path.parent
             image_filename_stem = args.image_path.stem
             show_work_path = image_dir / f"{image_filename_stem}_counted.jpg"
-
-            print(f"Writing visualization to: {show_work_path}")
+            print(f"Writing annotation to: {show_work_path}")
             # Use Path.as_posix() or str() for cv2.imwrite
             cv2.imwrite(str(show_work_path), image_with_contours)
 
