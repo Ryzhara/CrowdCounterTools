@@ -49,7 +49,7 @@ options:
 
 ## Video-to-Panorama Syntax
 This tool has been tested on MP4 images. It tries to create a panorama by extracting frames
-from the video file with spacing based on camera pan speed.
+from the video file with spacing you specify.
 
 ```commandline
 usage: video_to_panorama.py [-h] 
