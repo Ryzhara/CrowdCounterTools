@@ -77,7 +77,7 @@ def get_args() -> argparse.Namespace:
         "--target_rgb",
         type=parse_rgb,
         required=False,
-        help="Blob color as one of [red, green, blue, yellow, cyan, magenta] or an RGB tuple like 250,120,72",
+        help="Value of of [red, green, blue, yellow, cyan, magenta] or an RGB tuple like 250,120,72; default is all r,g,b,y,c,m]",
     )
 
     parser.add_argument(
@@ -92,7 +92,7 @@ def get_args() -> argparse.Namespace:
         "--show_work",
         type=parse_show_work,
         default="true",
-        help="Whether to draw contours: 'true', 'false' (default), or 'grayscale' (show work on grayscale copy)",
+        help="Whether to draw contours: true (default), false, or grayscale (show work on grayscale copy)",
     )
 
     parser.add_argument(
