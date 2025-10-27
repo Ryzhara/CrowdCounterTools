@@ -2,7 +2,10 @@ import cv2
 import numpy as np
 from pathlib import Path
 import argparse
-from typing import Final, Any, Tuple, List, Union, Literal
+from typing import Final, Any, Tuple, List, Union, Literal, Sequence
+
+from cv2 import Mat
+from numpy import ndarray, dtype
 
 # Define the type for an RGB color tuple
 RgbColor = Tuple[int, int, int]
@@ -115,7 +118,7 @@ def get_args() -> argparse.Namespace:
 
 #=================================
 # returns list of contours found for that color within the given tolerance
-def find_contours(image: np.ndarray, blob_rgb: RgbColor, tolerance: int) -> np.ndarray:
+def find_contours(image: np.ndarray, blob_rgb: RgbColor, tolerance: int) -> Sequence[Mat | ndarray]:
     # OpenCV uses BGR internally, so all colors must be reversed (R,G,B -> B,G,R)
     opencv_bgr = blob_rgb[::-1]
 
@@ -148,7 +151,7 @@ def count_color_blobs(
         tolerance: int = 30,
         grayscale_copy: bool = False,
         annotation_contour_rgb: RgbColor = (192, 64, 192),
-) -> Tuple[int, Any, np.ndarray, np.ndarray]:
+) -> tuple[dict[str, ndarray], Mat | ndarray]:
     """
     Counts color blobs (connected components) in an image based on a target color,
     and returns the count, mask, and image with contours.
@@ -225,9 +228,7 @@ def main() -> None:
 
         counts = { k: len(v) for k,v in contour_list.items() }
         counts["Total"] =sum(counts.values())
-
         text_summary = [ f"\t{k}: {v}" for k,v in counts.items() ]
-
         print(f"Found\n{"\n".join(text_summary)}\nblobs in the image.")
 
         # --- Output / Visualization ---
@@ -242,12 +243,12 @@ def main() -> None:
 
     except (FileNotFoundError, ValueError, argparse.ArgumentTypeError) as e:
         # Catch and print specific errors raised during argument parsing or file IO
-        print(f"\n❌ Error: {e}")
+        print(f"\nError: {e}")
         # Exit with a non-zero status code to indicate failure
         exit(1)
     except Exception as e:
         # Catch all other unexpected errors
-        print(f"\n❌ An unexpected error occurred: {e}")
+        print(f"\nAn unexpected error occurred: {e}")
         exit(1)
 
 
