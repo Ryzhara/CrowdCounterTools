@@ -71,6 +71,13 @@ def get_args() -> argparse.Namespace:
     parser.add_argument("image_path", type=Path, help="Path to the input image file.")
 
     parser.add_argument(
+        "--target_rgb",
+        type=parse_rgb,
+        required=False,
+        help="Blob color as one of [red, green, blue, yellow, cyan, magenta] or an RGB tuple like 250,120,72",
+    )
+
+    parser.add_argument(
         "--tolerance",
         type=int,
         default=30,
@@ -199,15 +206,18 @@ def main() -> None:
 
         print("--- Blob Counter Arguments ---")
         print(f"  Image Path:   {args.image_path.resolve()}")
+        if args.target_rgb:
+            print(f"  Special blob color:   {args.target_rgb}")
         print(f"  Show Work:    {args.show_work}")
         print(f"  Marker Color: {args.marker_color}")
         print(f"  Tolerance:    {args.tolerance}")
         print("------------------------------")
 
         # --- Run Core Logic ---
+        blob_color_list = {f"custom {args.target_rgb}": args.target_rgb} if args.target_rgb else NAMED_COLORS
         contour_list, image_with_contours = count_color_blobs(
             image_path=args.image_path,
-            blob_color_list=NAMED_COLORS,
+            blob_color_list= blob_color_list,
             tolerance=args.tolerance,
         	grayscale_copy=args.show_work == "grayscale",
             annotation_contour_rgb=MARKER_COLOR,
@@ -218,14 +228,14 @@ def main() -> None:
 
         text_summary = [ f"\t{k}: {v}" for k,v in counts.items() ]
 
-        print(f"✅ Found\n{"\n".join(text_summary)}\nblobs in the image.")
+        print(f"Found\n{"\n".join(text_summary)}\nblobs in the image.")
 
         # --- Output / Visualization ---
         if args.show_work in ("true", "grayscale"):
             # Construct output filename: original_name_counted.jpg
             image_dir = args.image_path.parent
             image_filename_stem = args.image_path.stem
-            show_work_path = image_dir / f"{image_filename_stem}_counted.jpg"
+            show_work_path = image_dir / f"{image_filename_stem}_counted_{args.show_work}.jpg"
             print(f"Writing annotation to: {show_work_path}")
             # Use Path.as_posix() or str() for cv2.imwrite
             cv2.imwrite(str(show_work_path), image_with_contours)
