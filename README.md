@@ -1,6 +1,30 @@
 # CrowdCounterTools
 Simple tools to count crowd density at public gatherings
 
+## Stitch Sequence
+```commandline
+# Pass in a directory path and a glob file filter expression
+# The left-to-right image collection sequence should correspond to 
+# an alphanumeric sort of the files by name.
+python stitch_sequence.py path/to/image/directory *.jpg
+```
+
+
+## Stitch Sequence Syntax
+```commandline
+usage: stitch_sequence.py [-h] [-o OUTPUT] directory filter
+
+Stitch a sequence of images into a panorama using OpenCV.
+
+positional arguments:
+  directory            The base directory containing the images to stitch.
+  filter               A file name glob pattern to filter images (e.g., '*.jpg', 'img*.png').
+
+options:
+  -h, --help           show this help message and exit
+  -o, --output OUTPUT  The name for the output panoramic image (default: panorama.jpg).
+```
+
 Creating a panoramic image allows using your favorite video editor and human vision, or automation
 to tag stuff in your panoramic image with 'blobs' of paint, whether from the 
 video extraction or other source, that need to be counted with a known color.
